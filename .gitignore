@@ -1,0 +1,9 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.idea/
+MicrosoftAgentFramework.sln.DotSettings.user
+global.json
+Agentic_Orchestration_Patterns.md
