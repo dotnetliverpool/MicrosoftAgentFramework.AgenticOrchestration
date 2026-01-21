@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
+using MicrosoftAgentFramework;
 using MicrosoftAgentFramework.Agent;
 using MicrosoftAgentFramework.Agent.Executors;
 using MicrosoftAgentFramework.Models;
@@ -13,6 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add application services
+builder.Services.AddApplicationServices(builder.Configuration);
 
 
 var app = builder.Build();
