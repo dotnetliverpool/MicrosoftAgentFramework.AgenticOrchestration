@@ -8,10 +8,14 @@ namespace MicrosoftAgentFramework.Services.CountriesNowApiClient;
 public class CountriesNowApiClient
 {
     private readonly HttpClient _httpClient;
-    private const string BaseUrl = "https://countriesnow.space/api/v0.1";
+    private const string BaseUrl = "https://countriesnow.space/api/v0.1/";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
+    };
+    private static readonly JsonSerializerOptions SerializeOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
     public CountriesNowApiClient(HttpClient httpClient)
@@ -29,11 +33,11 @@ public class CountriesNowApiClient
         CityPopulationRequest request, 
         CancellationToken cancellationToken = default)
     {
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(request, SerializeOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var response = await _httpClient.PostAsync(
-            "/countries/population/cities", 
+            "countries/population/cities", 
             content, 
             cancellationToken);
         
@@ -50,11 +54,11 @@ public class CountriesNowApiClient
         FilterCitiesRequest request, 
         CancellationToken cancellationToken = default)
     {
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(request, SerializeOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var response = await _httpClient.PostAsync(
-            "/countries/population/cities/filter", 
+            "countries/population/cities/filter", 
             content, 
             cancellationToken);
         
@@ -71,7 +75,7 @@ public class CountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.GetAsync(
-            "/countries/population/cities", 
+            "countries/population/cities", 
             cancellationToken);
         
         response.EnsureSuccessStatusCode();
@@ -87,11 +91,11 @@ public class CountriesNowApiClient
         FilterPopulationRequest request, 
         CancellationToken cancellationToken = default)
     {
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(request, SerializeOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var response = await _httpClient.PostAsync(
-            "/countries/population/filter", 
+            "countries/population/filter", 
             content, 
             cancellationToken);
         
@@ -108,11 +112,11 @@ public class CountriesNowApiClient
         CountryPopulationRequest request, 
         CancellationToken cancellationToken = default)
     {
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(request, SerializeOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var response = await _httpClient.PostAsync(
-            "/countries/population", 
+            "countries/population", 
             content, 
             cancellationToken);
         
@@ -129,7 +133,7 @@ public class CountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.GetAsync(
-            "/countries/population", 
+            "countries/population", 
             cancellationToken);
         
         response.EnsureSuccessStatusCode();
@@ -147,7 +151,7 @@ public class CountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.GetAsync(
-            "/countries/currency", 
+            "countries/currency", 
             cancellationToken);
         
         response.EnsureSuccessStatusCode();
@@ -163,11 +167,11 @@ public class CountriesNowApiClient
         CountryCurrencyRequest request, 
         CancellationToken cancellationToken = default)
     {
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(request, SerializeOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var response = await _httpClient.PostAsync(
-            "/countries/currency", 
+            "countries/currency", 
             content, 
             cancellationToken);
         
@@ -186,11 +190,11 @@ public class CountriesNowApiClient
         CountryPositionRequest request, 
         CancellationToken cancellationToken = default)
     {
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(request, SerializeOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
         
         var response = await _httpClient.PostAsync(
-            "/countries/positions", 
+            "countries/positions", 
             content, 
             cancellationToken);
         

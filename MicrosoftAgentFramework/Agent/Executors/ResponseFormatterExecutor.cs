@@ -5,27 +5,49 @@ using MicrosoftAgentFramework.Models;
 
 namespace MicrosoftAgentFramework.Agent.Executors;
 
-public class ResponseFormatterExecutor(string responseLanguage) 
+public class ResponseFormatterExecutor(
+    AgentRegistry agentRegistry,
+    string responseLanguage) 
     : ReflectingExecutor<ResponseFormatterExecutor>("ResponseFormatter"), 
-      IMessageHandler<Country, string>
+      IMessageHandler<Country, string>,
+      IMessageHandler<ExtractCountryNameResponse, string>
 {
-    public ValueTask<string> HandleAsync(
+    public async ValueTask<string> HandleAsync(
         Country country, 
         IWorkflowContext context, 
         CancellationToken cancellationToken)
     {
-        var response = new
-        {
-            country = country,
-            language = responseLanguage,
-            formattedAt = DateTime.UtcNow
-        };
-        
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions 
+        var json = JsonSerializer.Serialize(country, new JsonSerializerOptions 
         { 
             WriteIndented = true 
         });
         
-        return ValueTask.FromResult(json);
+        return await TranslateResponseAsync(json, cancellationToken);
+    }
+
+    public async ValueTask<string> HandleAsync(
+        ExtractCountryNameResponse errorResponse, 
+        IWorkflowContext context, 
+        CancellationToken cancellationToken)
+    {
+        var json = JsonSerializer.Serialize(errorResponse, new JsonSerializerOptions 
+        { 
+            WriteIndented = true 
+        });
+        
+        return await TranslateResponseAsync(json, cancellationToken);
+    }
+
+    private async ValueTask<string> TranslateResponseAsync(string jsonData, CancellationToken cancellationToken)
+    {
+        var agent = agentRegistry.Get(AgentName.ResponseTranslator, new Dictionary<string, object>
+        {
+            { "responseLanguage", responseLanguage }
+        });
+
+        var message = $"Translate this response: {jsonData}";
+        var response = await agent.RunAsync(message: message, cancellationToken: cancellationToken);
+        
+        return response.Text;
     }
 }

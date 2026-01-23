@@ -1,7 +1,7 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using OpenMeteo;
 using MicrosoftAgentFramework.Services;
+using MicrosoftAgentFramework.Services.OpenMeteo;
 
 namespace MicrosoftAgentFramework.Agent.Composer;
 
@@ -24,7 +24,7 @@ public class WeatherAgentComposer(IAgentProvider agentProvider, IServiceProvider
             Provide detailed, helpful responses about weather for any location.
             """;
 
-        var weatherApiClient = new OpenMeteo.OpenMeteoClient();
+        var weatherApiClient = serviceProvider.GetRequiredService<LoggingOpenMeteoClient>();
 
         List<AITool> tools = new List<AITool>()
         {

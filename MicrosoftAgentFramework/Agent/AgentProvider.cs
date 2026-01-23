@@ -1,9 +1,8 @@
-﻿using Azure.AI.OpenAI;
+using Azure.AI.OpenAI;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MicrosoftAgentFramework.Agent.Middleware;
 using MicrosoftAgentFramework.Configuration;
 using OpenAI;
 using OpenAI.Chat;
@@ -24,21 +23,11 @@ public class AzureOpenAiAgentProvider(AzureOpenAIClient azureOpenAiClient, IServ
                              ?? throw new NotSupportedException($"No implementation registered for {aiModel.ClientType.ToString()}");
         aiModel.ModelName = _options.DeploymentName;
         
-        var agent = implementation.Create(azureOpenAiClient, aiModel, instructions, tools, contextProviderFactory);
-        
-        // Create logger typed to agent name
-        var loggerCategory = aiModel.Name ?? "UnknownAgent";
-        var logger = loggerFactory.CreateLogger(loggerCategory);
-        
-        // Add middleware for function call logging
-        return (ChatClientAgent)agent
-            .AsBuilder()
-            .Use(FunctionCallLoggingMiddleware.Create(logger))
-            .Build();
+        return implementation.Create(azureOpenAiClient, aiModel, instructions, tools, contextProviderFactory);
     }
 }
 
-public class AzureOpenAiChatClientImplementation : IAgentImplementation
+public class AzureOpenAiChatClientImplementation(ILoggerFactory loggerFactory) : IAgentImplementation
 {
     public AgentClient ClientStrategy { get; } = AgentClient.ChatClient;
     public ChatClientAgent Create(
@@ -73,7 +62,12 @@ public class AzureOpenAiChatClientImplementation : IAgentImplementation
         
         return client
             .GetChatClient(model.ModelName)
-            .CreateAIAgent(agentOptions);
+            .CreateAIAgent(options: agentOptions, clientFactory: (chatClient) =>
+            {
+                return chatClient
+                    .AsBuilder()
+                    .Build();
+            });
     }
 }
 

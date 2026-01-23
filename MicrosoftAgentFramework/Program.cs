@@ -33,7 +33,7 @@ app.UseHttpsRedirection();
 app.MapGet("/structuredOutput", async (AgentRegistry registry, string message, CancellationToken cancellationToken) =>
     {
         
-        ChatClientAgent agent = registry.Get(AgentName.StructuredOutput);
+        ChatClientAgent agent = registry.Get(AgentName.CountryISOExpert);
         
         ChatClientAgentRunResponse<ExtractCountryNameResponse> countryNameResponseResult = await agent.
             RunAsync<ExtractCountryNameResponse>(message: message, cancellationToken: cancellationToken);
@@ -47,58 +47,65 @@ app.MapGet("/structuredOutput", async (AgentRegistry registry, string message, C
         List<Country> countriesData = new List<Country>();
         
         var existingCountry = countriesData.FirstOrDefault(x => 
-            string.Equals(x.IATACode, extractCountryNameResponse.IATACode, StringComparison.OrdinalIgnoreCase));
+            string.Equals(x.ISOCode, extractCountryNameResponse.ISOCode, StringComparison.OrdinalIgnoreCase));
 
         if (existingCountry is not null)
         {
             return Results.Ok(existingCountry);
         }
         
-        ChatClientAgentRunResponse<Country> countryDataResponseResult = await agent.
-            RunAsync<Country>(message: $"how many colors are there in the official flag of {extractCountryNameResponse.IATACode}", 
+        ChatClientAgent flagExpertAgent = registry.Get(AgentName.CountryFlagExpert);
+        
+        ChatClientAgentRunResponse<Country> countryDataResponseResult = await flagExpertAgent.
+            RunAsync<Country>(message: $"what are the colors in the official flag of {extractCountryNameResponse.CountryName}", 
                 cancellationToken: cancellationToken);
         
         Country countryData = countryDataResponseResult.Result;
+        countryData.CountryName ??= extractCountryNameResponse.CountryName;
         
         countriesData.Add(countryData);
         return Results.Ok(countryData);
 
     })
     .WithName("StructuredOutput")
+    .WithSummary("Extract country information and flag colors from user messages")
+    .WithDescription("Uses AI agents to extract country name, ISO 3166-1 alpha-3 code, and flag colors from natural language messages containing geographic references.")
+    .Produces<Country>()
+    .Produces<string>(StatusCodes.Status400BadRequest)
     .WithOpenApi();
 
 
 app.MapGet("/agentWithTool", async (AgentRegistry registry, string message, CancellationToken cancellationToken) =>
 {
-    ChatClientAgent agent = registry.Get(AgentName.AgentWithTools);
-    
+    var agent = registry.Get(AgentName.HistoricalAndCurrencyToolExpert);
     var response = await agent.RunAsync(message: message, cancellationToken: cancellationToken);
     
-    return Results.Ok(new { response = response.Text });
+    return Results.Ok(response.Text);
 })
 .WithName("AgentWithTools")
 .WithOpenApi();
 
 app.MapGet("agentAsTool", async (AgentRegistry registry, string message, CancellationToken cancellationToken) =>
     {
-        ChatClientAgent agent = registry.Get(AgentName.AgentAsTool);
-        
+        var agent = registry.Get(AgentName.AgentAsTool);
         var response = await agent.RunAsync(message: message, cancellationToken: cancellationToken);
         
-        return Results.Ok(new { response = response.Text });
+        return Results.Ok(response.Text );
     })
     .WithName("AgentAsTool")
     .WithOpenApi();
 
-app.MapGet("reflectingExecutor", async (AgentRegistry registry, string message, 
-        string responseLanguage = "English", CancellationToken cancellationToken = default) =>
+app.MapGet("reflectingExecutor", async (
+        AgentRegistry registry, 
+        string message, 
+        string responseLanguage = "English", 
+        CancellationToken cancellationToken = default) =>
     {
         // Create executors
         var countryExtractor = new CountryExtractorExecutor(registry);
         var cacheChecker = new CountryCacheCheckerExecutor();
         var dataEnricher = new CountryDataEnricherExecutor(registry);
-        var responseFormatter = new ResponseFormatterExecutor(responseLanguage);
-        var errorResponse = new ErrorResponseExecutor(responseLanguage);
+        var responseFormatter = new ResponseFormatterExecutor(registry, responseLanguage);
 
         // Build workflow
         WorkflowBuilder builder = new(countryExtractor);
@@ -110,7 +117,7 @@ app.MapGet("reflectingExecutor", async (AgentRegistry registry, string message,
             {
                 switchBuilder.AddCase<ExtractCountryNameResponse>(
                     x => !x!.Success,
-                    [errorResponse]
+                    [responseFormatter]
                 );
                 switchBuilder.AddCase<ExtractCountryNameResponse>(
                     x => x!.Success, 
@@ -144,14 +151,14 @@ app.MapGet("reflectingExecutor", async (AgentRegistry registry, string message,
         await foreach (WorkflowEvent evt in run.WatchStreamAsync(cancellationToken))
         {
             if (evt is not ExecutorCompletedEvent executorComplete) continue;
-            if (executorComplete.ExecutorId is "ResponseFormatter" or "ErrorResponse")
+            if (executorComplete.ExecutorId == "ResponseFormatter")
             {
                 finalResult = executorComplete.Data?.ToString();
             }
         }
         
         return finalResult != null ?
-            Results.Content(finalResult, "application/json") : 
+            Results.Ok(finalResult) : 
             Results.BadRequest("Workflow execution did not complete successfully");
     })
     .WithName("ReflectingExecutorBuilder")
@@ -166,13 +173,13 @@ app.MapGet("agentOrchestrationHandoff", async (
 {
     var logger = loggerFactory.CreateLogger("AgentOrchestrationHandoff");
     // Get agents
-    var orchestratorAgent = registry.Get(AgentName.OrchestratorAgent);
-    var locationAgent = registry.Get(AgentName.LocationAgent);
-    var weatherAgent = registry.Get(AgentName.WeatherAgent);
+    var orchestratorAgent = registry.Get(AgentName.OrchestratorAgent).AsBuilder().Build();
+    var locationAgent = registry.Get(AgentName.LocationAgent).AsBuilder().Build();
+    var weatherAgent = registry.Get(AgentName.WeatherAgent).AsBuilder().Build();
     var translatorAgent = registry.Get(AgentName.TranslatorAgent, new Dictionary<string, object> 
     { 
         { "responseLanguage", responseLanguage } 
-    });
+    }).AsBuilder().Build();
 
     // Build handoff workflow
     Workflow workflow = AgentWorkflowBuilder.CreateHandoffBuilderWith(orchestratorAgent)
@@ -194,14 +201,6 @@ app.MapGet("agentOrchestrationHandoff", async (
         switch (evt)
         {
             case AgentRunUpdateEvent updateEvent:
-                // Accumulate agent responses
-                if (!string.Equals(updateEvent.ExecutorId, lastExecutorId, StringComparison.Ordinal))
-                {
-                    lastExecutorId = updateEvent.ExecutorId;
-                    logger.LogInformation($"Executor update received from : {updateEvent.ExecutorId ?? updateEvent.Update.AuthorName}");
-                }
-                logger.LogInformation(updateEvent.Update.Text);
-                
                 if (updateEvent.Update.Contents.OfType<FunctionCallContent>().FirstOrDefault() is { } call)
                 {
                     logger.LogInformation($"Call '{call.Name}' with arguments: {JsonSerializer.Serialize(call.Arguments)}]");
@@ -210,7 +209,8 @@ app.MapGet("agentOrchestrationHandoff", async (
             
             case WorkflowOutputEvent output:
                 // Get final output
-                finalResponse += output.As<string>();
+                List<ChatMessage> data = (List<ChatMessage>)output.Data;
+                finalResponse += data[data.Count - 1].Text;
                 break;
 
             case ExecutorFailedEvent failedEvent:
@@ -223,9 +223,10 @@ app.MapGet("agentOrchestrationHandoff", async (
     }
 
     return finalResponse != null
-        ? Results.Ok(new { response = finalResponse })
+        ? Results.Ok( finalResponse)
         : Results.BadRequest("Workflow execution did not complete successfully");
 })
 .WithName("AgentOrchestrationHandoff")
 .WithOpenApi();
 
+await app.RunAsync();

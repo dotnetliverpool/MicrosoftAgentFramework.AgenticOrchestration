@@ -1,16 +1,20 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace MicrosoftAgentFramework.Agent;
 
 public enum AgentName
 {
-    StructuredOutput,
-    AgentWithTools,
+    CountryISOExpert,
+    HistoricalAndCurrencyToolExpert,
     AgentAsTool,
     CountryExtractor,
     CountryDataEnricher,
+    CountryFlagExpert,
     OrchestratorAgent,
     LocationAgent,
     WeatherAgent,
     TranslatorAgent,
+    ResponseTranslator,
 }
 
 public enum AgentReasoningEffortLevel
@@ -27,5 +31,3 @@ public enum AgentClient
 {
     ChatClient, ResponseClient
 }
-
-public enum SkylarIntent {HotelSearch, FlightSearch, RestaurantSearch, GeneralTravel}

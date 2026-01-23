@@ -17,7 +17,7 @@ public class CountryCacheCheckerExecutor()
     {
         // Check if country exists in cache
         var existingCountry = CountriesCache.FirstOrDefault(x => 
-            string.Equals(x.IATACode, extractResponse.IATACode, StringComparison.OrdinalIgnoreCase));
+            string.Equals(x.ISOCode, extractResponse.ISOCode, StringComparison.OrdinalIgnoreCase));
 
         // Return Country if found, otherwise return ExtractCountryNameResponse for enrichment
         object result = existingCountry != null ? (object)existingCountry : extractResponse;

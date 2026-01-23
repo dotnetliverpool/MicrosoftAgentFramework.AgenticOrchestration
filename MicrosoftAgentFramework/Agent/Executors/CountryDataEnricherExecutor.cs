@@ -17,7 +17,7 @@ public class CountryDataEnricherExecutor(AgentRegistry agentRegistry)
     {
         var agent = agentRegistry.Get(AgentName.CountryDataEnricher);
         
-        var message = $"how many colors are there in the official flag of {extractResponse.IATACode}";
+        var message = $"what are the colors in the flag of {extractResponse.ISOCode}, {extractResponse.CountryName}";
         
         var response = await agent.RunAsync<Country>(
             message: message, 

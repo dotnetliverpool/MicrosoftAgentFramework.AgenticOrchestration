@@ -2,6 +2,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using MicrosoftAgentFramework.Services;
 using MicrosoftAgentFramework.Services.CountriesNowApiClient;
+using MicrosoftAgentFramework.Services.OpenMeteo;
 
 namespace MicrosoftAgentFramework.Agent.Composer;
 
@@ -20,9 +21,9 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
 
         const string instructions = "You are a country geodata and weather expert.";
 
-        var countriesNowApiClient = serviceProvider.GetRequiredService<CountriesNowApiClient>();
+        var countriesNowApiClient = serviceProvider.GetRequiredService<LoggingCountriesNowApiClient>();
         var dateTimeProvider = serviceProvider.GetRequiredService<IDateTimeProvider>();
-        var weatherApiClient  = new OpenMeteo.OpenMeteoClient();
+        var weatherApiClient = serviceProvider.GetRequiredService<LoggingOpenMeteoClient>();
 
         // Create Currency Agent
         var currencyAgent = CreateCurrencyAgent(countriesNowApiClient);
@@ -67,7 +68,7 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
             contextProviderFactory: null);
     }
 
-    private ChatClientAgent CreateCurrencyAgent(CountriesNowApiClient countriesNowApiClient)
+    private ChatClientAgent CreateCurrencyAgent(LoggingCountriesNowApiClient countriesNowApiClient)
     {
         var aiModel = new AiModel
         {
@@ -80,10 +81,6 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
 
         List<AITool> tools = new List<AITool>()
         {
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetAllCountriesCurrencyAsync,
-                name: "get_all_countries_currency",
-                description: "Gets all countries and their currencies"),
             
             AIFunctionFactory.Create(
                 countriesNowApiClient.GetCountryCurrencyAsync,
@@ -98,7 +95,7 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
             contextProviderFactory: null);
     }
 
-    private ChatClientAgent CreatePopulationAgent(CountriesNowApiClient countriesNowApiClient)
+    private ChatClientAgent CreatePopulationAgent(LoggingCountriesNowApiClient countriesNowApiClient)
     {
         var aiModel = new AiModel
         {
@@ -117,29 +114,9 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
                 description: "Gets a single city and its population data"),
             
             AIFunctionFactory.Create(
-                countriesNowApiClient.FilterCitiesAsync,
-                name: "filter_cities_population",
-                description: "Filters cities and population data by country, order, and limit"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetAllCitiesPopulationAsync,
-                name: "get_all_cities_population",
-                description: "Gets all cities and their population data"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.FilterPopulationAsync,
-                name: "filter_countries_population",
-                description: "Filters countries and population data by year, limit, greater than, less than, order, and orderBy"),
-            
-            AIFunctionFactory.Create(
                 countriesNowApiClient.GetCountryPopulationAsync,
                 name: "get_country_population",
                 description: "Gets a single country and its population data"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetAllCountriesPopulationAsync,
-                name: "get_all_countries_population",
-                description: "Gets all countries and their respective population data (1961-2018)")
         };
 
         return agentProvider.GetAgent(
@@ -149,7 +126,7 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
             contextProviderFactory: null);
     }
 
-    private ChatClientAgent CreateWeatherAgent(OpenMeteo.OpenMeteoClient weatherApiClient)
+    private ChatClientAgent CreateWeatherAgent(LoggingOpenMeteoClient weatherApiClient)
     {
         var aiModel = new AiModel
         {
