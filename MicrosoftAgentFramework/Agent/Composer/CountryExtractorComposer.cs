@@ -29,9 +29,6 @@ public class CountryExtractorComposer(IAgentProvider agentProvider) : IAgentComp
             """;
         
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions);
     }
 }

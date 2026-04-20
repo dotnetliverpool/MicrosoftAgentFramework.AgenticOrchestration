@@ -41,10 +41,6 @@ public class WeatherAgentComposer(IAgentProvider agentProvider, IServiceProvider
                 description: "Gets weather forecast for a location by latitude and longitude coordinates")
         };
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: tools,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 }

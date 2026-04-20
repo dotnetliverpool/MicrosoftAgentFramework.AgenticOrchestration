@@ -49,10 +49,6 @@ public class HistoricalAndCurrencyToolExpertAgentComposer(IAgentProvider agentPr
                 description: "Gets the current UTC date and time")
         };
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: tools,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 }

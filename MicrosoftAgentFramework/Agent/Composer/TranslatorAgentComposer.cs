@@ -25,10 +25,6 @@ public class TranslatorAgentComposer(IAgentProvider agentProvider) : IAgentCompo
             Maintain professional tone and accuracy in translation.
             """;
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: null,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions);
     }
 }

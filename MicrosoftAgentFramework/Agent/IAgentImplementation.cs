@@ -12,5 +12,6 @@ public interface IAgentImplementation
         AiModel model, 
         string instructions, 
         List<AITool>? tools,
-        Func<ChatClientAgentOptions.AIContextProviderFactoryContext, AIContextProvider>? contextProviderFactory = null);
+        List<AIContextProvider>? contextProviders,
+        IChatReducer? chatReducer);
 }

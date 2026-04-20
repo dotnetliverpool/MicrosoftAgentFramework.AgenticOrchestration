@@ -26,10 +26,6 @@ public class OrchestratorAgentComposer(IAgentProvider agentProvider) : IAgentCom
             If the question is about translation or language, hand off to the translator agent.
             """;
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: null,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions);
     }
 }

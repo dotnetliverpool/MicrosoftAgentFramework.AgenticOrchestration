@@ -60,10 +60,6 @@ public class LocationAgentComposer(IAgentProvider agentProvider, IServiceProvide
                 description: "Gets the current UTC date and time")
         };
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: tools,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 }

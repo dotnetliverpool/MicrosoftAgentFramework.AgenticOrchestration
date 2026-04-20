@@ -26,9 +26,6 @@ public class CountryDataEnricherComposer(IAgentProvider agentProvider) : IAgentC
             Be precise and accurate with country identification.
             """;
         
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions);
     }
 }

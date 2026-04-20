@@ -61,11 +61,7 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
                 description: "Gets the current UTC date and time")
         };
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: agentTools,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions, agentTools);
     }
 
     private ChatClientAgent CreateCurrencyAgent(LoggingCountriesNowApiClient countriesNowApiClient)
@@ -88,11 +84,7 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
                 description: "Gets a single country and its currency")
         };
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: tools,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 
     private ChatClientAgent CreatePopulationAgent(LoggingCountriesNowApiClient countriesNowApiClient)
@@ -119,11 +111,7 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
                 description: "Gets a single country and its population data"),
         };
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: tools,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 
     private ChatClientAgent CreateWeatherAgent(LoggingOpenMeteoClient weatherApiClient)
@@ -152,10 +140,6 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
                 description: "Gets weather forecast for a location by latitude and longitude coordinates")
         };
 
-        return agentProvider.GetAgent(
-            aiModel: aiModel,
-            instructions: instructions,
-            tools: tools,
-            contextProviderFactory: null);
+        return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 }
