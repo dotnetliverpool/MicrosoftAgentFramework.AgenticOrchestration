@@ -2,9 +2,11 @@ using Azure;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MicrosoftAgentFramework.Agent;
 using MicrosoftAgentFramework.Agent.Composer;
 using MicrosoftAgentFramework.Configuration;
+using MicrosoftAgentFramework.Runtime;
 using MicrosoftAgentFramework.Services;
 using MicrosoftAgentFramework.Services.CountriesNowApiClient;
 using MicrosoftAgentFramework.Services.OpenMeteo;
@@ -15,15 +17,30 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Register Configuration
-        services.Configure<OpenAIConfig>(configuration.GetSection("OpenAIConfig"));
+        services
+            .AddOptions<OpenAIConfig>()
+            .Bind(configuration.GetSection("OpenAIConfig"))
+            .ValidateDataAnnotations()
+            .Validate(static options =>
+                !string.IsNullOrWhiteSpace(options.ApiKey) &&
+                !string.IsNullOrWhiteSpace(options.Endpoint) &&
+                !string.IsNullOrWhiteSpace(options.DeploymentName),
+                "OpenAIConfig requires ApiKey, Endpoint, and DeploymentName.")
+            .ValidateOnStart();
 
-        // Register Azure OpenAI Client
-        var openAiConfig = configuration.GetSection("OpenAIConfig").Get<OpenAIConfig>() 
-            ?? throw new InvalidOperationException("OpenAI configuration is missing");
+        services
+            .AddOptions<ThreadManagerOptions>()
+            .Bind(configuration.GetSection("ThreadManager"))
+            .ValidateDataAnnotations()
+            .Validate(static options =>
+                string.Equals(options.Provider, "json", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(options.Provider, "memory", StringComparison.OrdinalIgnoreCase),
+                "ThreadManager:Provider must be either 'memory' or 'json'.")
+            .ValidateOnStart();
         
         services.AddSingleton<AzureOpenAIClient>(sp =>
         {
+            var openAiConfig = sp.GetRequiredService<IOptions<OpenAIConfig>>().Value;
             return new AzureOpenAIClient(
                 new Uri(openAiConfig.Endpoint),
                 new AzureKeyCredential(openAiConfig.ApiKey));
@@ -61,6 +78,16 @@ public static class DependencyInjection
         });
         
         services.AddScoped<AgentRegistry>();
+        var threadManagerProvider = configuration.GetSection("ThreadManager").GetValue<string>("Provider");
+        if (string.Equals(threadManagerProvider, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IThreadManager, JsonDocumentThreadManager>();
+        }
+        else
+        {
+            services.AddSingleton<IThreadManager, InMemoryThreadManager>();
+        }
+        services.AddScoped<IAgentRuntime, AgentRuntime>();
 
         // Register Agent Provider
         services.AddScoped<IAgentProvider, AzureOpenAiAgentProvider>();
@@ -70,17 +97,20 @@ public static class DependencyInjection
         services.AddKeyedScoped<IAgentImplementation, AzureOpenAiResponseClientImplementation>(AgentClient.ResponseClient);
 
         // Register Agent Composers (keyed services) - scoped because they depend on scoped services
-        services.AddKeyedScoped<IAgentComposer, CountryISOAgentComposer>(AgentName.CountryISOExpert);
         services.AddKeyedScoped<IAgentComposer, HistoricalAndCurrencyToolExpertAgentComposer>(AgentName.HistoricalAndCurrencyToolExpert);
         services.AddKeyedScoped<IAgentComposer, AgentAsToolComposer>(AgentName.AgentAsTool);
         services.AddKeyedScoped<IAgentComposer, CountryExtractorComposer>(AgentName.CountryExtractor);
         services.AddKeyedScoped<IAgentComposer, CountryDataEnricherComposer>(AgentName.CountryDataEnricher);
-        services.AddKeyedScoped<IAgentComposer, CountryFlagExpertComposer>(AgentName.CountryFlagExpert);
         services.AddKeyedScoped<IAgentComposer, OrchestratorAgentComposer>(AgentName.OrchestratorAgent);
         services.AddKeyedScoped<IAgentComposer, LocationAgentComposer>(AgentName.LocationAgent);
         services.AddKeyedScoped<IAgentComposer, WeatherAgentComposer>(AgentName.WeatherAgent);
         services.AddKeyedScoped<IAgentComposer, TranslatorAgentComposer>(AgentName.TranslatorAgent);
         services.AddKeyedScoped<IAgentComposer, ResponseTranslatorAgentComposer>(AgentName.ResponseTranslator);
+        services.AddKeyedScoped<IAgentComposer, TravelIntentAgentComposer>(AgentName.TravelIntentAgent);
+        services.AddKeyedScoped<IAgentComposer, BudgetPlannerAgentComposer>(AgentName.BudgetPlannerAgent);
+        services.AddKeyedScoped<IAgentComposer, ItineraryPlannerAgentComposer>(AgentName.ItineraryPlannerAgent);
+        services.AddKeyedScoped<IAgentComposer, LodgingAdvisorAgentComposer>(AgentName.LodgingAdvisorAgent);
+        services.AddKeyedScoped<IAgentComposer, TransportAdvisorAgentComposer>(AgentName.TransportAdvisorAgent);
 
         return services;
     }

@@ -4,17 +4,20 @@ namespace MicrosoftAgentFramework.Agent;
 
 public enum AgentName
 {
-    CountryISOExpert,
     HistoricalAndCurrencyToolExpert,
     AgentAsTool,
     CountryExtractor,
     CountryDataEnricher,
-    CountryFlagExpert,
     OrchestratorAgent,
     LocationAgent,
     WeatherAgent,
     TranslatorAgent,
     ResponseTranslator,
+    TravelIntentAgent,
+    BudgetPlannerAgent,
+    ItineraryPlannerAgent,
+    LodgingAdvisorAgent,
+    TransportAdvisorAgent
 }
 
 public enum AgentReasoningEffortLevel

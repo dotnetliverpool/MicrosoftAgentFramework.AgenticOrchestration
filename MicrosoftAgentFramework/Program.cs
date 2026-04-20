@@ -6,6 +6,7 @@ using MicrosoftAgentFramework;
 using MicrosoftAgentFramework.Agent;
 using MicrosoftAgentFramework.Agent.Executors;
 using MicrosoftAgentFramework.Models;
+using MicrosoftAgentFramework.Runtime;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,47 +31,77 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/structuredOutput", async (AgentRegistry registry, string message, CancellationToken cancellationToken) =>
+app.MapGet("/travelPlanner", async (
+        IAgentRuntime runtime,
+        string message,
+        string sessionId = "default-session",
+        CancellationToken cancellationToken = default) =>
+{
+    var intentSessionId = $"{sessionId}:{AgentName.TravelIntentAgent}";
+    var budgetSessionId = $"{sessionId}:{AgentName.BudgetPlannerAgent}";
+    var itinerarySessionId = $"{sessionId}:{AgentName.ItineraryPlannerAgent}";
+    var lodgingSessionId = $"{sessionId}:{AgentName.LodgingAdvisorAgent}";
+    var transportSessionId = $"{sessionId}:{AgentName.TransportAdvisorAgent}";
+
+    AgentRunResult<TravelIntentResponse> intentRun = await runtime
+        .WithAgent(AgentName.TravelIntentAgent)
+        .ForSession(intentSessionId)
+        .RunAsync<TravelIntentResponse>(message, cancellationToken);
+
+    var intent = intentRun.Result;
+    if (intent is null)
+        return Results.BadRequest("Unable to extract travel intent.");
+    if (!intent.Success)
     {
-        
-        ChatClientAgent agent = registry.Get(AgentName.CountryISOExpert);
-        
-        ChatClientAgentRunResponse<ExtractCountryNameResponse> countryNameResponseResult = await agent.
-            RunAsync<ExtractCountryNameResponse>(message: message, cancellationToken: cancellationToken);
-        
-        ExtractCountryNameResponse extractCountryNameResponse = countryNameResponseResult.Result;
-        if (extractCountryNameResponse.Success == false)
+        return Results.Ok(new TravelPlannerFollowUpResponse
         {
-            return Results.BadRequest(extractCountryNameResponse.UserPromptMessage);
-        }
+            Status = "needs_more_info",
+            Intent = intent,
+            Guidance = intent.UserPromptMessage ?? "Please provide destination and basic trip details."
+        });
+    }
 
-        List<Country> countriesData = new List<Country>();
-        
-        var existingCountry = countriesData.FirstOrDefault(x => 
-            string.Equals(x.ISOCode, extractCountryNameResponse.ISOCode, StringComparison.OrdinalIgnoreCase));
+    var handoffContext = JsonSerializer.Serialize(intent);
 
-        if (existingCountry is not null)
-        {
-            return Results.Ok(existingCountry);
-        }
-        
-        ChatClientAgent flagExpertAgent = registry.Get(AgentName.CountryFlagExpert);
-        
-        ChatClientAgentRunResponse<Country> countryDataResponseResult = await flagExpertAgent.
-            RunAsync<Country>(message: $"what are the colors in the official flag of {extractCountryNameResponse.CountryName}", 
-                cancellationToken: cancellationToken);
-        
-        Country countryData = countryDataResponseResult.Result;
-        countryData.CountryName ??= extractCountryNameResponse.CountryName;
-        
-        countriesData.Add(countryData);
-        return Results.Ok(countryData);
+    AgentRunResult<TravelBudgetPlan> budgetRun = await runtime
+        .WithAgent(AgentName.BudgetPlannerAgent)
+        .ForSession(budgetSessionId)
+        .RunAsync<TravelBudgetPlan>($"Travel intent context: {handoffContext}", cancellationToken);
 
-    })
-    .WithName("StructuredOutput")
-    .WithSummary("Extract country information and flag colors from user messages")
-    .WithDescription("Uses AI agents to extract country name, ISO 3166-1 alpha-3 code, and flag colors from natural language messages containing geographic references.")
-    .Produces<Country>()
+    AgentRunResult<TravelItineraryPlan> itineraryRun = await runtime
+        .WithAgent(AgentName.ItineraryPlannerAgent)
+        .ForSession(itinerarySessionId)
+        .RunAsync<TravelItineraryPlan>($"Travel intent context: {handoffContext}. Budget guidance: {JsonSerializer.Serialize(budgetRun.Result)}", cancellationToken);
+
+    AgentRunResult<TravelLodgingPlan> lodgingRun = await runtime
+        .WithAgent(AgentName.LodgingAdvisorAgent)
+        .ForSession(lodgingSessionId)
+        .RunAsync<TravelLodgingPlan>($"Travel intent context: {handoffContext}. Budget guidance: {JsonSerializer.Serialize(budgetRun.Result)}. Itinerary summary: {JsonSerializer.Serialize(itineraryRun.Result)}", cancellationToken);
+
+    AgentRunResult<TravelTransportPlan> transportRun = await runtime
+        .WithAgent(AgentName.TransportAdvisorAgent)
+        .ForSession(transportSessionId)
+        .RunAsync<TravelTransportPlan>($"Travel intent context: {handoffContext}. Itinerary summary: {JsonSerializer.Serialize(itineraryRun.Result)}", cancellationToken);
+
+    if (budgetRun.Result is null || itineraryRun.Result is null || lodgingRun.Result is null || transportRun.Result is null)
+        return Results.BadRequest("Travel planning could not be completed from the current request details.");
+
+    var response = new TravelPlannerResponse
+    {
+        Intent = intent,
+        Budget = budgetRun.Result,
+        Itinerary = itineraryRun.Result,
+        Lodging = lodgingRun.Result,
+        Transport = transportRun.Result
+    };
+
+    return Results.Ok(response);
+})
+    .WithName("TravelPlanner")
+    .WithSummary("Plan travel with isolated specialist agents")
+    .WithDescription("Runs intent, budget, itinerary, lodging, and transport agents with concern-scoped memory and explicit structured handoffs.")
+    .Produces<TravelPlannerResponse>()
+    .Produces<TravelPlannerFollowUpResponse>()
     .Produces<string>(StatusCodes.Status400BadRequest)
     .WithOpenApi();
 
@@ -78,7 +109,7 @@ app.MapGet("/structuredOutput", async (AgentRegistry registry, string message, C
 app.MapGet("/agentWithTool", async (AgentRegistry registry, string message, CancellationToken cancellationToken) =>
 {
     var agent = registry.Get(AgentName.HistoricalAndCurrencyToolExpert);
-    var response = await agent.RunAsync(message: message, cancellationToken: cancellationToken);
+    AgentResponse response = await agent.RunAsync(message: message, cancellationToken: cancellationToken);
     
     return Results.Ok(response.Text);
 })
@@ -144,7 +175,7 @@ app.MapGet("reflectingExecutor", async (
 
         // Execute workflow
         var workflow = builder.Build();
-        StreamingRun run = await InProcessExecution.StreamAsync(workflow: workflow, input: message, cancellationToken: cancellationToken);
+        StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow: workflow, input: message, cancellationToken: cancellationToken);
 
         string? finalResult = null;
         
@@ -182,7 +213,9 @@ app.MapGet("agentOrchestrationHandoff", async (
     }).AsBuilder().Build();
 
     // Build handoff workflow
+#pragma warning disable MAAIW001
     Workflow workflow = AgentWorkflowBuilder.CreateHandoffBuilderWith(orchestratorAgent)
+#pragma warning restore MAAIW001
         .WithHandoffs(orchestratorAgent, [locationAgent, weatherAgent])
         .WithHandoffs([locationAgent, weatherAgent], orchestratorAgent)
         .WithHandoffs(orchestratorAgent, [translatorAgent])
@@ -190,7 +223,7 @@ app.MapGet("agentOrchestrationHandoff", async (
 
     // Execute workflow
     StreamingRun run = await InProcessExecution
-        .StreamAsync(workflow:workflow, input:message, cancellationToken:cancellationToken);
+        .RunStreamingAsync(workflow: workflow, input: message, cancellationToken: cancellationToken);
     await run.TrySendMessageAsync(new TurnToken(emitEvents: true));
 
     string? finalResponse = null;
@@ -200,13 +233,6 @@ app.MapGet("agentOrchestrationHandoff", async (
     {
         switch (evt)
         {
-            case AgentRunUpdateEvent updateEvent:
-                if (updateEvent.Update.Contents.OfType<FunctionCallContent>().FirstOrDefault() is { } call)
-                {
-                    logger.LogInformation($"Call '{call.Name}' with arguments: {JsonSerializer.Serialize(call.Arguments)}]");
-                }
-                break;
-            
             case WorkflowOutputEvent output:
                 // Get final output
                 List<ChatMessage> data = (List<ChatMessage>)output.Data;
