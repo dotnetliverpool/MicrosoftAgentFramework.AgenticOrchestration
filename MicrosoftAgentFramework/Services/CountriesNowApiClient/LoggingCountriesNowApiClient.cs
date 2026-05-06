@@ -25,13 +25,13 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.GetCityPopulationAsync called with City: {City}", request.City);
+        _logger.LogDebug("CountriesNowApiClient.GetCityPopulationAsync called with City: {City}", request.City);
         
         try
         {
             var result = await _innerClient.GetCityPopulationAsync(request, cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.GetCityPopulationAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.GetCityPopulationAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -47,14 +47,14 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.FilterCitiesAsync called with Country: {Country}, Limit: {Limit}", 
+        _logger.LogDebug("CountriesNowApiClient.FilterCitiesAsync called with Country: {Country}, Limit: {Limit}", 
             request.Country, request.Limit);
         
         try
         {
             var result = await _innerClient.FilterCitiesAsync(request, cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.FilterCitiesAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.FilterCitiesAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -69,13 +69,13 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.GetAllCitiesPopulationAsync called");
+        _logger.LogDebug("CountriesNowApiClient.GetAllCitiesPopulationAsync called");
         
         try
         {
             var result = await _innerClient.GetAllCitiesPopulationAsync(cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.GetAllCitiesPopulationAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.GetAllCitiesPopulationAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -91,14 +91,14 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.FilterPopulationAsync called with Year: {Year}, Limit: {Limit}", 
+        _logger.LogDebug("CountriesNowApiClient.FilterPopulationAsync called with Year: {Year}, Limit: {Limit}", 
             request.Year, request.Limit);
         
         try
         {
             var result = await _innerClient.FilterPopulationAsync(request, cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.FilterPopulationAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.FilterPopulationAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -114,13 +114,13 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.GetCountryPopulationAsync called with Country: {Country}", request.Country);
+        _logger.LogDebug("CountriesNowApiClient.GetCountryPopulationAsync called with Country: {Country}", request.Country);
         
         try
         {
             var result = await _innerClient.GetCountryPopulationAsync(request, cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.GetCountryPopulationAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.GetCountryPopulationAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -135,13 +135,13 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.GetAllCountriesPopulationAsync called");
+        _logger.LogDebug("CountriesNowApiClient.GetAllCountriesPopulationAsync called");
         
         try
         {
             var result = await _innerClient.GetAllCountriesPopulationAsync(cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.GetAllCountriesPopulationAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.GetAllCountriesPopulationAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -156,13 +156,13 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.GetAllCountriesCurrencyAsync called");
+        _logger.LogDebug("CountriesNowApiClient.GetAllCountriesCurrencyAsync called");
         
         try
         {
             var result = await _innerClient.GetAllCountriesCurrencyAsync(cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.GetAllCountriesCurrencyAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.GetAllCountriesCurrencyAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -178,13 +178,13 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.GetCountryCurrencyAsync called with Country: {Country}", request.Country);
+        _logger.LogDebug("CountriesNowApiClient.GetCountryCurrencyAsync called with Country: {Country}", request.Country);
         
         try
         {
             var result = await _innerClient.GetCountryCurrencyAsync(request, cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.GetCountryCurrencyAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.GetCountryCurrencyAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)
@@ -200,13 +200,13 @@ public class LoggingCountriesNowApiClient
         CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("CountriesNowApiClient.GetCountryPositionAsync called with Country: {Country}", request.Country);
+        _logger.LogDebug("CountriesNowApiClient.GetCountryPositionAsync called with Country: {Country}", request.Country);
         
         try
         {
             var result = await _innerClient.GetCountryPositionAsync(request, cancellationToken);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("CountriesNowApiClient.GetCountryPositionAsync completed in {Duration}ms", duration);
+            _logger.LogDebug("CountriesNowApiClient.GetCountryPositionAsync completed in {Duration}ms", duration);
             return result;
         }
         catch (Exception ex)

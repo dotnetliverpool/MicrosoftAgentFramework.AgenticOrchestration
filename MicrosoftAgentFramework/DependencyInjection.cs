@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MicrosoftAgentFramework.Agent;
 using MicrosoftAgentFramework.Agent.Composer;
+using MicrosoftAgentFramework.Agent.Tools;
 using MicrosoftAgentFramework.Configuration;
 using MicrosoftAgentFramework.Runtime;
 using MicrosoftAgentFramework.Services;
@@ -76,6 +77,10 @@ public static class DependencyInjection
             var dateTimeProvider = sp.GetRequiredService<IDateTimeProvider>();
             return new LoggingOpenMeteoClient(innerClient, logger, dateTimeProvider);
         });
+
+        services.AddScoped<CountryTools>();
+        services.AddScoped<WeatherTools>();
+        services.AddScoped<DateTimeTools>();
         
         services.AddScoped<AgentRegistry>();
         var threadManagerProvider = configuration.GetSection("ThreadManager").GetValue<string>("Provider");
@@ -94,10 +99,9 @@ public static class DependencyInjection
 
         // Register Agent Implementations (keyed services)
         services.AddKeyedScoped<IAgentImplementation, AzureOpenAiChatClientImplementation>(AgentClient.ChatClient);
-        services.AddKeyedScoped<IAgentImplementation, AzureOpenAiResponseClientImplementation>(AgentClient.ResponseClient);
 
         // Register Agent Composers (keyed services) - scoped because they depend on scoped services
-        services.AddKeyedScoped<IAgentComposer, HistoricalAndCurrencyToolExpertAgentComposer>(AgentName.HistoricalAndCurrencyToolExpert);
+        services.AddKeyedScoped<IAgentComposer, CountryInfoToolAgentComposer>(AgentName.CountryInfoToolAgent);
         services.AddKeyedScoped<IAgentComposer, AgentAsToolComposer>(AgentName.AgentAsTool);
         services.AddKeyedScoped<IAgentComposer, CountryExtractorComposer>(AgentName.CountryExtractor);
         services.AddKeyedScoped<IAgentComposer, CountryDataEnricherComposer>(AgentName.CountryDataEnricher);
@@ -105,7 +109,7 @@ public static class DependencyInjection
         services.AddKeyedScoped<IAgentComposer, LocationAgentComposer>(AgentName.LocationAgent);
         services.AddKeyedScoped<IAgentComposer, WeatherAgentComposer>(AgentName.WeatherAgent);
         services.AddKeyedScoped<IAgentComposer, TranslatorAgentComposer>(AgentName.TranslatorAgent);
-        services.AddKeyedScoped<IAgentComposer, ResponseTranslatorAgentComposer>(AgentName.ResponseTranslator);
+        services.AddKeyedScoped<IAgentComposer, CountryDataNarratorAgentComposer>(AgentName.CountryDataNarratorAgent);
         services.AddKeyedScoped<IAgentComposer, TravelIntentAgentComposer>(AgentName.TravelIntentAgent);
         services.AddKeyedScoped<IAgentComposer, BudgetPlannerAgentComposer>(AgentName.BudgetPlannerAgent);
         services.AddKeyedScoped<IAgentComposer, ItineraryPlannerAgentComposer>(AgentName.ItineraryPlannerAgent);

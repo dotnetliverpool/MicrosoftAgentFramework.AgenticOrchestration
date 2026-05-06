@@ -89,15 +89,17 @@ public class AgentRuntime(AgentRegistry registry, IThreadManager threadManager, 
                 ct);
 
             var usage = UsageInfo.From(response!);
-            
+
+            logger.LogInformation("[DEMO] --------------------------------------------");
+            logger.LogInformation("[DEMO] Agent      {AgentName}", agentName.ToString());
+            logger.LogInformation("[DEMO] Session    {SessionId}", _sessionId);
             logger.LogInformation(
-                "AgentRunCompleted SessionId={SessionId} ThreadId={ThreadId} AgentName={AgentName} PromptTokens={PromptTokens} CompletionTokens={CompletionTokens} DurationMs={DurationMs}",
-                _sessionId,
-                _sessionId,
-                agentName.ToString(),
-                usage.PromptTokens,
-                usage.CompletionTokens,
-                stopwatch.Elapsed.TotalMilliseconds);
+                "[DEMO] Tokens     in: {Prompt}  out: {Completion}  total: {Total}",
+                usage.PromptTokens ?? 0,
+                usage.CompletionTokens ?? 0,
+                usage.TotalTokens ?? 0);
+            logger.LogInformation("[DEMO] Duration   {Duration} ms", (long)stopwatch.Elapsed.TotalMilliseconds);
+            logger.LogInformation("[DEMO] --------------------------------------------");
 
             return new ExecutionContext<TResponse>(response, usage, stopwatch.Elapsed.TotalMilliseconds);
         }

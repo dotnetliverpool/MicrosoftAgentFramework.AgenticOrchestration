@@ -22,22 +22,14 @@ public class LoggingOpenMeteoClient
 
     public async Task<WeatherForecast?> QueryAsync(string location, CancellationToken cancellationToken = default)
     {
-        var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("OpenMeteoClient.QueryAsync called with Location: {Location}", location);
-        
         try
         {
             var result = await _innerClient.QueryAsync(location);
-            var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("OpenMeteoClient.QueryAsync completed in {Duration}ms for Location: {Location}", 
-                duration, location);
             return result;
         }
         catch (Exception ex)
         {
-            var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogError(ex, "OpenMeteoClient.QueryAsync failed after {Duration}ms for Location: {Location}", 
-                duration, location);
+            _logger.LogError(ex, "OpenMeteoClient.QueryAsync failed for Location: {Location}", location);
             throw;
         }
     }
@@ -45,14 +37,14 @@ public class LoggingOpenMeteoClient
     public async Task<WeatherForecast?> QueryAsync(float latitude, float longitude, CancellationToken cancellationToken = default)
     {
         var startTime = _dateTimeProvider.UtcNow;
-        _logger.LogInformation("OpenMeteoClient.QueryAsync called with Coordinates: Lat={Latitude}, Long={Longitude}", 
+        _logger.LogDebug("OpenMeteoClient.QueryAsync called with Coordinates: Lat={Latitude}, Long={Longitude}", 
             latitude, longitude);
         
         try
         {
             var result = await _innerClient.QueryAsync(latitude, longitude);
             var duration = (_dateTimeProvider.UtcNow - startTime).TotalMilliseconds;
-            _logger.LogInformation("OpenMeteoClient.QueryAsync completed in {Duration}ms for Coordinates: Lat={Latitude}, Long={Longitude}", 
+            _logger.LogDebug("OpenMeteoClient.QueryAsync completed in {Duration}ms for Coordinates: Lat={Latitude}, Long={Longitude}", 
                 duration, latitude, longitude);
             return result;
         }
