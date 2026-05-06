@@ -1,26 +1,30 @@
-using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
-using Microsoft.Agents.AI.Workflows.Reflection;
 using MicrosoftAgentFramework.Agent;
 using MicrosoftAgentFramework.Models;
+using MicrosoftAgentFramework.Runtime;
 
 namespace MicrosoftAgentFramework.Agent.Executors;
 
-public class CountryExtractorExecutor(AgentRegistry agentRegistry) 
-    : ReflectingExecutor<CountryExtractorExecutor>("CountryExtractor"), 
-      IMessageHandler<string, ExtractCountryNameResponse>
+public partial class CountryExtractorExecutor(IAgentRuntime agentRuntime)
+    : Executor("CountryExtractor")
 {
-    public async ValueTask<ExtractCountryNameResponse> HandleAsync(
-        string message, 
-        IWorkflowContext context, 
+    protected override ProtocolBuilder ConfigureProtocol(ProtocolBuilder protocolBuilder)
+    {
+        protocolBuilder.ConfigureRoutes(routeBuilder =>
+            routeBuilder.AddHandler<string, ExtractCountryNameResponse>(HandleAsync));
+        return protocolBuilder;
+    }
+
+    [MessageHandler]
+    private async ValueTask<ExtractCountryNameResponse> HandleAsync(
+        string message,
+        IWorkflowContext context,
         CancellationToken cancellationToken)
     {
-        var agent = agentRegistry.Get(AgentName.CountryExtractor);
-        
-        var response = await agent.RunAsync<ExtractCountryNameResponse>(
-            message: message, 
-            cancellationToken: cancellationToken);
-        
-        return response.Result;
+        var response = await agentRuntime
+            .WithAgent(AgentName.CountryExtractor)
+            .RunAsync<ExtractCountryNameResponse>(message, cancellationToken);
+
+        return response.Result!;
     }
 }

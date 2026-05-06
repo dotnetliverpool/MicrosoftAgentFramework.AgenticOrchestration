@@ -20,6 +20,7 @@ public class CountryDataEnricherComposer(IAgentProvider agentProvider) : IAgentC
 
         const string instructions = """
             You are an agent specialized in enriching country data with detailed information including flag colors.
+            You receive a country identifier (name and ISO code) and enrich it with detailed information.
             
             Extract structured data about countries including Iso codes, names, and flag colors.
             For flag colors, extract all distinct colors mentioned or that you know about the official flag.

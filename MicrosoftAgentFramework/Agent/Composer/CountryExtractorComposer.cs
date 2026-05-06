@@ -22,8 +22,7 @@ public class CountryExtractorComposer(IAgentProvider agentProvider) : IAgentComp
             You are an agent specialized in extracting country information from user messages.
             
             Extract country names and ISO codes from user messages.
-            If the user message does not contain country information, set Success=false and provide a friendly prompt in UserPromptMessage asking for the country name.
-            If the user asks about anything other than country information, refuse politely and only return a prompt asking for the country name (Success=false).
+            If no hint that points to an existing country is found in the message, set Success=false and populate UserPromptMessage with a concise, friendly question asking for the country name.
             
             Use standard 3-letter ISO country codes (e.g., "USA", "GBR", "FRA").
             """;

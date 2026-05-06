@@ -1,18 +1,24 @@
 using Microsoft.Agents.AI.Workflows;
-using Microsoft.Agents.AI.Workflows.Reflection;
 using MicrosoftAgentFramework.Models;
 
 namespace MicrosoftAgentFramework.Agent.Executors;
 
-public class CountryCacheCheckerExecutor() 
-    : ReflectingExecutor<CountryCacheCheckerExecutor>("CountryCacheChecker"), 
-      IMessageHandler<ExtractCountryNameResponse, object>
+public partial class CountryCacheCheckerExecutor()
+    : Executor("CountryCacheChecker")
 {
     public static readonly List<Country> CountriesCache = new();
 
-    public ValueTask<object> HandleAsync(
-        ExtractCountryNameResponse extractResponse, 
-        IWorkflowContext context, 
+    protected override ProtocolBuilder ConfigureProtocol(ProtocolBuilder protocolBuilder)
+    {
+        protocolBuilder.ConfigureRoutes(routeBuilder =>
+            routeBuilder.AddHandler<ExtractCountryNameResponse, object>(HandleAsync));
+        return protocolBuilder;
+    }
+
+    [MessageHandler]
+    private ValueTask<object> HandleAsync(
+        ExtractCountryNameResponse extractResponse,
+        IWorkflowContext context,
         CancellationToken cancellationToken)
     {
         // Check if country exists in cache

@@ -1,31 +1,35 @@
-using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
-using Microsoft.Agents.AI.Workflows.Reflection;
 using MicrosoftAgentFramework.Agent;
 using MicrosoftAgentFramework.Models;
+using MicrosoftAgentFramework.Runtime;
 
 namespace MicrosoftAgentFramework.Agent.Executors;
 
-public class CountryDataEnricherExecutor(AgentRegistry agentRegistry) 
-    : ReflectingExecutor<CountryDataEnricherExecutor>("CountryDataEnricher"), 
-      IMessageHandler<ExtractCountryNameResponse, Country>
+public partial class CountryDataEnricherExecutor(IAgentRuntime agentRuntime)
+    : Executor("CountryDataEnricher")
 {
-    public async ValueTask<Country> HandleAsync(
-        ExtractCountryNameResponse extractResponse, 
-        IWorkflowContext context, 
+    protected override ProtocolBuilder ConfigureProtocol(ProtocolBuilder protocolBuilder)
+    {
+        protocolBuilder.ConfigureRoutes(routeBuilder =>
+            routeBuilder.AddHandler<ExtractCountryNameResponse, Country>(HandleAsync));
+        return protocolBuilder;
+    }
+
+    [MessageHandler]
+    private async ValueTask<Country> HandleAsync(
+        ExtractCountryNameResponse extractResponse,
+        IWorkflowContext context,
         CancellationToken cancellationToken)
     {
-        var agent = agentRegistry.Get(AgentName.CountryDataEnricher);
-        
         var message = $"what are the colors in the flag of {extractResponse.ISOCode}, {extractResponse.CountryName}";
-        
-        var response = await agent.RunAsync<Country>(
-            message: message, 
-            cancellationToken: cancellationToken);
-        
+
+        var response = await agentRuntime
+            .WithAgent(AgentName.CountryDataEnricher)
+            .RunAsync<Country>(message, cancellationToken);
+
         // Add to cache
-        CountryCacheCheckerExecutor.CountriesCache.Add(response.Result);
-        
-        return response.Result;
+        CountryCacheCheckerExecutor.CountriesCache.Add(response.Result!);
+
+        return response.Result!;
     }
 }
