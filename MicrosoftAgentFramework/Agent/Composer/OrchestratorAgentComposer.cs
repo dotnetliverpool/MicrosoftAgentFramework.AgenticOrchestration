@@ -22,8 +22,7 @@ public class OrchestratorAgentComposer(IAgentProvider agentProvider) : IAgentCom
             - WeatherAgent: For questions about weather, forecasts, or weather conditions
             
             If the question requires both location and weather information, coordinate with both agents.
-            After receiving responses from specialist agents, provide a comprehensive answer.
-            If the question is about translation or language, hand off to the translator agent.
+            After receiving complete responses from specialist agents, hand off to the TranslatorAgent to present the final answer in the requested language.
             """;
 
         return agentProvider.GetAgent(aiModel, instructions);

@@ -1,11 +1,10 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using MicrosoftAgentFramework.Services;
-using MicrosoftAgentFramework.Services.CountriesNowApiClient;
+using MicrosoftAgentFramework.Agent.Tools;
 
 namespace MicrosoftAgentFramework.Agent.Composer;
 
-public class LocationAgentComposer(IAgentProvider agentProvider, IServiceProvider serviceProvider) : IAgentComposer
+public class LocationAgentComposer(IAgentProvider agentProvider, CountryTools countryTools) : IAgentComposer
 {
     public AgentName Name => AgentName.LocationAgent;
 
@@ -24,40 +23,12 @@ public class LocationAgentComposer(IAgentProvider agentProvider, IServiceProvide
             Provide detailed, helpful responses about any country-related queries.
             """;
 
-        var countriesNowApiClient = serviceProvider.GetRequiredService<CountriesNowApiClient>();
-        var dateTimeProvider = serviceProvider.GetRequiredService<IDateTimeProvider>();
-
-        List<AITool> tools = new List<AITool>()
+        List<AITool> tools = new()
         {
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetCityPopulationAsync,
-                name: "get_city_population",
-                description: "Gets a single city and its population data"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetCountryPopulationAsync,
-                name: "get_country_population",
-                description: "Gets a single country and its population data"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetCountryCurrencyAsync,
-                name: "get_country_currency",
-                description: "Gets a single country and its currency"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetCountryPositionAsync,
-                name: "get_country_position",
-                description: "Gets a country's latitude and longitude coordinates"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetAllCountriesCurrencyAsync,
-                name: "get_all_countries_currency",
-                description: "Gets all countries and their currencies"),
-            
-            AIFunctionFactory.Create(
-                () => Task.FromResult(dateTimeProvider.UtcNow),
-                name: "get_current_utc_time",
-                description: "Gets the current UTC date and time")
+            countryTools.CityPopulation,
+            countryTools.CountryPopulation,
+            countryTools.CountryCurrency,
+            countryTools.CountryPosition
         };
 
         return agentProvider.GetAgent(aiModel, instructions, tools);

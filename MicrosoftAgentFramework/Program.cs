@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
-using Microsoft.Extensions.AI;
 using MicrosoftAgentFramework;
 using MicrosoftAgentFramework.Agent;
 using MicrosoftAgentFramework.Agent.Executors;
@@ -99,50 +98,60 @@ app.MapGet("/travelPlanner", async (
 })
     .WithName("TravelPlanner")
     .WithSummary("Plan travel with isolated specialist agents")
-    .WithDescription("Runs intent, budget, itinerary, lodging, and transport agents with concern-scoped memory and explicit structured handoffs.")
+    .WithDescription("Runs intent, budget, itinerary, lodging, and transport agents with concern-scoped memory and explicit structured handoffs. Try message: 'Plan a 5-day trip to Lisbon for two travelers with a medium budget and foodie interests.'")
     .Produces<TravelPlannerResponse>()
     .Produces<TravelPlannerFollowUpResponse>()
     .Produces<string>(StatusCodes.Status400BadRequest)
     .WithOpenApi();
 
 
-app.MapGet("/agentWithTool", async (AgentRegistry registry, string message, CancellationToken cancellationToken) =>
+app.MapGet("/agentWithTool", async (IAgentRuntime runtime, string message, CancellationToken cancellationToken) =>
 {
-    var agent = registry.Get(AgentName.HistoricalAndCurrencyToolExpert);
-    AgentResponse response = await agent.RunAsync(message: message, cancellationToken: cancellationToken);
+    AgentRunResult result = await runtime
+        .WithAgent(AgentName.CountryInfoToolAgent)
+        .ForSession("default-session")
+        .RunAsync(message, cancellationToken);
     
-    return Results.Ok(response.Text);
+    return Results.Ok(result.Text);
 })
 .WithName("AgentWithTools")
+.WithSummary("Single agent with all tools - observe full schema cost per call")
+.WithDescription("One agent with 8 tools. Every tool schema is serialized into the prompt on every LLM call, even when only one tool is needed. Use the same message on /agentAsTool and compare the [DEMO] token blocks in the console. Try message: 'What is the currency of Japan?' or 'What are the most populous cities in Germany?'")
 .WithOpenApi();
 
-app.MapGet("agentAsTool", async (AgentRegistry registry, string message, CancellationToken cancellationToken) =>
+app.MapGet("agentAsTool", async (IAgentRuntime runtime, string message, CancellationToken cancellationToken) =>
     {
-        var agent = registry.Get(AgentName.AgentAsTool);
-        var response = await agent.RunAsync(message: message, cancellationToken: cancellationToken);
-        
-        return Results.Ok(response.Text );
+        AgentRunResult result = await runtime
+            .WithAgent(AgentName.AgentAsTool)
+            .ForSession("default-session")
+            .RunAsync(message, cancellationToken);
+    
+        return Results.Ok(result.Text);
     })
     .WithName("AgentAsTool")
+    .WithSummary("Orchestrator routing to specialist sub-agents - lazy schema loading")
+    .WithDescription("An orchestrator carries only thin sub-agent wrapper schemas. Only the selected sub-agent loads its own tools. For a focused question, prompt and completion tokens will be lower than /agentWithTool. Try message: 'What is the currency of Japan?' (routes to currency sub-agent only) or 'What is the weather in Tokyo and the currency of Japan?' (routes to two sub-agents).")
     .WithOpenApi();
 
 app.MapGet("reflectingExecutor", async (
-        AgentRegistry registry, 
+        IAgentRuntime runtime, 
+        ILoggerFactory loggerFactory,
         string message, 
         string responseLanguage = "English", 
         CancellationToken cancellationToken = default) =>
     {
-        // Create executors
-        var countryExtractor = new CountryExtractorExecutor(registry);
-        var cacheChecker = new CountryCacheCheckerExecutor();
-        var dataEnricher = new CountryDataEnricherExecutor(registry);
-        var responseFormatter = new ResponseFormatterExecutor(registry, responseLanguage);
+        var logger = loggerFactory.CreateLogger("ReflectingExecutor");
 
+        // Create executors
+        var countryExtractor = new CountryExtractorExecutor(runtime);
+        var cacheChecker = new CountryCacheCheckerExecutor();
+        var dataEnricher = new CountryDataEnricherExecutor(runtime);
+        var responseFormatter = new ResponseFormatterExecutor(runtime, responseLanguage);
         // Build workflow
-        WorkflowBuilder builder = new(countryExtractor);
+        WorkflowBuilder workflowBuilder = new(countryExtractor);
 
         // Add switch after extraction: check if Success == false
-        builder.AddSwitch(
+        workflowBuilder.AddSwitch(
             source: countryExtractor,
             switchBuilder =>
             {
@@ -154,9 +163,8 @@ app.MapGet("reflectingExecutor", async (
                     x => x!.Success, 
                     [cacheChecker]);
             });
-
         // Add switch after cache check: if found return formatted, else enrich
-        builder.AddSwitch(
+        workflowBuilder.AddSwitch(
             source: cacheChecker,
             switchBuilder =>
             {
@@ -169,18 +177,19 @@ app.MapGet("reflectingExecutor", async (
             });
 
         // Add edge from data enricher to formatter
-        builder.AddEdge(
+        workflowBuilder.AddEdge(
             source: dataEnricher,
             target: responseFormatter);
 
         // Execute workflow
-        var workflow = builder.Build();
+        var workflow = workflowBuilder.Build();
         StreamingRun run = await InProcessExecution.RunStreamingAsync(workflow: workflow, input: message, cancellationToken: cancellationToken);
 
         string? finalResult = null;
         
         await foreach (WorkflowEvent evt in run.WatchStreamAsync(cancellationToken))
         {
+            WorkflowLogger.Log(evt, logger);
             if (evt is not ExecutorCompletedEvent executorComplete) continue;
             if (executorComplete.ExecutorId == "ResponseFormatter")
             {
@@ -193,6 +202,8 @@ app.MapGet("reflectingExecutor", async (
             Results.BadRequest("Workflow execution did not complete successfully");
     })
     .WithName("ReflectingExecutorBuilder")
+    .WithSummary("Run a reflecting executor workflow with cache fallback")
+    .WithDescription("Builds and runs a workflow with extraction, cache check, enrichment, and narration. Try message: 'Tell me about France' or 'What are Germany's flag colors?'")
     .WithOpenApi();
 
 app.MapGet("agentOrchestrationHandoff", async (
@@ -202,7 +213,8 @@ app.MapGet("agentOrchestrationHandoff", async (
     string responseLanguage = "English", 
     CancellationToken cancellationToken = default) =>
 {
-    var logger = loggerFactory.CreateLogger("AgentOrchestrationHandoff");
+    var logger = loggerFactory.CreateLogger("AgentHandoff");
+
     // Get agents
     var orchestratorAgent = registry.Get(AgentName.OrchestratorAgent).AsBuilder().Build();
     var locationAgent = registry.Get(AgentName.LocationAgent).AsBuilder().Build();
@@ -220,23 +232,37 @@ app.MapGet("agentOrchestrationHandoff", async (
         .WithHandoffs([locationAgent, weatherAgent], orchestratorAgent)
         .WithHandoffs(orchestratorAgent, [translatorAgent])
         .Build();
-
+    
     // Execute workflow
     StreamingRun run = await InProcessExecution
         .RunStreamingAsync(workflow: workflow, input: message, cancellationToken: cancellationToken);
     await run.TrySendMessageAsync(new TurnToken(emitEvents: true));
 
     string? finalResponse = null;
-    string? lastExecutorId = null;
 
     await foreach (WorkflowEvent evt in run.WatchStreamAsync(cancellationToken))
     {
+        WorkflowLogger.Log(evt, logger);
         switch (evt)
         {
             case WorkflowOutputEvent output:
-                // Get final output
-                List<ChatMessage> data = (List<ChatMessage>)output.Data;
-                finalResponse += data[data.Count - 1].Text;
+                // Workflow output payload can vary by emitter. Handle known shapes safely.
+                if (output.Data is List<ChatMessage> messages && messages.Count > 0)
+                {
+                    finalResponse += messages[^1].Text;
+                }
+                else if (output.Data is ChatMessage chatMessage)
+                {
+                    finalResponse += chatMessage.Text;
+                }
+                else if (output.Data is AgentResponse agentResponse)
+                {
+                    finalResponse += agentResponse.Text;
+                }
+                else if (output.Data is not null)
+                {
+                    finalResponse += output.Data.ToString();
+                }
                 break;
 
             case ExecutorFailedEvent failedEvent:
@@ -253,6 +279,8 @@ app.MapGet("agentOrchestrationHandoff", async (
         : Results.BadRequest("Workflow execution did not complete successfully");
 })
 .WithName("AgentOrchestrationHandoff")
+.WithSummary("Run multi-agent handoff orchestration")
+.WithDescription("Coordinates orchestrator, location, weather, and translator agents in a handoff graph. Try message: 'What are the major cities in Germany and the current weather there?' and set responseLanguage=Spanish.")
 .WithOpenApi();
 
 await app.RunAsync();

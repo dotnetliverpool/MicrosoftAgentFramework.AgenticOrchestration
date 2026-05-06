@@ -1,4 +1,5 @@
 using Azure.AI.OpenAI;
+using System.Linq;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -44,6 +45,7 @@ public class AzureOpenAiChatClientImplementation(ILoggerFactory loggerFactory) :
         
         var agentOptions = new ChatClientAgentOptions
         {
+            Name = model.Name,
             ChatOptions = new ChatOptions
             {
                 Instructions = instructions
@@ -71,6 +73,26 @@ public class AzureOpenAiChatClientImplementation(ILoggerFactory loggerFactory) :
 #pragma warning restore MEAI001
                 return chatClient
                     .AsBuilder()
+                    .Use(async (messages, options, next, ct) =>
+                    {
+                        var toolCalls = messages
+                            .SelectMany(message => message.Contents)
+                            .OfType<FunctionCallContent>();
+
+                        if (toolCalls.Any())
+                        {
+                            var log = loggerFactory.CreateLogger("ToolCall");
+                            foreach (var call in toolCalls)
+                            {
+                                log.LogInformation(
+                                    "[DEMO] ToolCall   {FunctionName}  args: {Arguments}",
+                                    call.Name,
+                                    call.Arguments);
+                            }
+                        }
+
+                        await next(messages, options, ct);
+                    })
                     .UseChatReducer(reducerToUse)
                     .Build();
             });

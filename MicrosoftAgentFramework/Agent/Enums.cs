@@ -4,7 +4,7 @@ namespace MicrosoftAgentFramework.Agent;
 
 public enum AgentName
 {
-    HistoricalAndCurrencyToolExpert,
+    CountryInfoToolAgent,
     AgentAsTool,
     CountryExtractor,
     CountryDataEnricher,
@@ -12,7 +12,7 @@ public enum AgentName
     LocationAgent,
     WeatherAgent,
     TranslatorAgent,
-    ResponseTranslator,
+    CountryDataNarratorAgent,
     TravelIntentAgent,
     BudgetPlannerAgent,
     ItineraryPlannerAgent,
@@ -23,11 +23,6 @@ public enum AgentName
 public enum AgentReasoningEffortLevel
 {
     Minimal, Low, Medium, High
-}
-
-public enum AiProvider
-{
-    AzureOpenAi
 }
 
 public enum AgentClient

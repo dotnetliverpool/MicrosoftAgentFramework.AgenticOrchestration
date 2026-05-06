@@ -17,6 +17,7 @@ public class LodgingAdvisorAgentComposer(IAgentProvider agentProvider) : IAgentC
 
         const string instructions = """
             You are a lodging strategy specialist for travel planning.
+            You receive a JSON travel intent object as input. Use its fields (Destination, Dates, Travelers, BudgetLevel, Interests) to produce your plan.
             Recommend where and how to stay based on trip intent and budget.
 
             Return:

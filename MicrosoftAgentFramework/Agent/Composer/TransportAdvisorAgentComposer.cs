@@ -17,6 +17,7 @@ public class TransportAdvisorAgentComposer(IAgentProvider agentProvider) : IAgen
 
         const string instructions = """
             You are a travel transport specialist.
+            You receive a JSON travel intent object as input. Use its fields (Destination, Dates, Travelers, BudgetLevel, Interests) to produce your plan.
             Recommend efficient transport choices for arrival and local mobility based on trip context.
 
             Return:

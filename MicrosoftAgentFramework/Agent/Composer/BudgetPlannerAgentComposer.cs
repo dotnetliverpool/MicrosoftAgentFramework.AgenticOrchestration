@@ -17,6 +17,7 @@ public class BudgetPlannerAgentComposer(IAgentProvider agentProvider) : IAgentCo
 
         const string instructions = """
             You are a travel budget specialist.
+            You receive a JSON travel intent object as input. Use its fields (Destination, Dates, Travelers, BudgetLevel, Interests) to produce your plan.
             Produce a practical budget envelope and category breakdown for the provided trip intent.
 
             Return:

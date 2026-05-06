@@ -17,6 +17,7 @@ public class ItineraryPlannerAgentComposer(IAgentProvider agentProvider) : IAgen
 
         const string instructions = """
             You are an itinerary planning specialist.
+            You receive a JSON travel intent object as input. Use its fields (Destination, Dates, Travelers, BudgetLevel, Interests) to produce your plan.
             Build a clear day-by-day travel plan from trip intent and budget guidance.
 
             Return:

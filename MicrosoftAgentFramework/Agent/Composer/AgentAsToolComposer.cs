@@ -1,12 +1,14 @@
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using MicrosoftAgentFramework.Services;
-using MicrosoftAgentFramework.Services.CountriesNowApiClient;
-using MicrosoftAgentFramework.Services.OpenMeteo;
+using MicrosoftAgentFramework.Agent.Tools;
 
 namespace MicrosoftAgentFramework.Agent.Composer;
 
-public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider serviceProvider) : IAgentComposer
+public class AgentAsToolComposer(
+    IAgentProvider agentProvider,
+    CountryTools countryTools,
+    WeatherTools weatherTools,
+    DateTimeTools dateTimeTools) : IAgentComposer
 {
     public AgentName Name => AgentName.AgentAsTool;
 
@@ -19,20 +21,23 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
             Name = Name.ToString()
         };
 
-        const string instructions = "You are a country geodata and weather expert.";
-
-        var countriesNowApiClient = serviceProvider.GetRequiredService<LoggingCountriesNowApiClient>();
-        var dateTimeProvider = serviceProvider.GetRequiredService<IDateTimeProvider>();
-        var weatherApiClient = serviceProvider.GetRequiredService<LoggingOpenMeteoClient>();
+        const string instructions = """
+            You are a country geodata and weather expert.
+            Use currency_agent for questions about country currencies.
+            Use population_agent for questions about city or country populations.
+            Use weather_agent for weather conditions or forecasts.
+            Use get_current_utc_time for time context when needed.
+            Answer using only the sub-agents relevant to the question.
+            """;
 
         // Create Currency Agent
-        var currencyAgent = CreateCurrencyAgent(countriesNowApiClient);
+        var currencyAgent = CreateCurrencyAgent(countryTools);
         
         // Create Population Agent
-        var populationAgent = CreatePopulationAgent(countriesNowApiClient);
+        var populationAgent = CreatePopulationAgent(countryTools);
         
         // Create Weather Agent
-        var weatherAgent = CreateWeatherAgent(weatherApiClient);
+        var weatherAgent = CreateWeatherAgent(weatherTools);
 
         // Convert agents to tools for the orchestrator agent
         List<AITool> agentTools = new List<AITool>()
@@ -55,16 +60,13 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
                 Description = "An agent specialized in weather data. Use this to get current weather and forecasts for locations."
             }),
             
-            AIFunctionFactory.Create(
-                () => Task.FromResult(dateTimeProvider.UtcNow),
-                name: "get_current_utc_time",
-                description: "Gets the current UTC date and time")
+            dateTimeTools.CurrentUtcTime
         };
 
         return agentProvider.GetAgent(aiModel, instructions, agentTools);
     }
 
-    private ChatClientAgent CreateCurrencyAgent(LoggingCountriesNowApiClient countriesNowApiClient)
+    private ChatClientAgent CreateCurrencyAgent(CountryTools countryTools)
     {
         var aiModel = new AiModel
         {
@@ -75,19 +77,15 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
 
         const string instructions = "You are an agent that specializes in currency information for countries.";
 
-        List<AITool> tools = new List<AITool>()
+        List<AITool> tools = new()
         {
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetCountryCurrencyAsync,
-                name: "get_country_currency",
-                description: "Gets a single country and its currency")
+            countryTools.CountryCurrency
         };
 
         return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 
-    private ChatClientAgent CreatePopulationAgent(LoggingCountriesNowApiClient countriesNowApiClient)
+    private ChatClientAgent CreatePopulationAgent(CountryTools countryTools)
     {
         var aiModel = new AiModel
         {
@@ -98,23 +96,16 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
 
         const string instructions = "You are an agent that specializes in population data for countries and cities.";
 
-        List<AITool> tools = new List<AITool>()
+        List<AITool> tools = new()
         {
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetCityPopulationAsync,
-                name: "get_city_population",
-                description: "Gets a single city and its population data"),
-            
-            AIFunctionFactory.Create(
-                countriesNowApiClient.GetCountryPopulationAsync,
-                name: "get_country_population",
-                description: "Gets a single country and its population data"),
+            countryTools.CityPopulation,
+            countryTools.CountryPopulation
         };
 
         return agentProvider.GetAgent(aiModel, instructions, tools);
     }
 
-    private ChatClientAgent CreateWeatherAgent(LoggingOpenMeteoClient weatherApiClient)
+    private ChatClientAgent CreateWeatherAgent(WeatherTools weatherTools)
     {
         var aiModel = new AiModel
         {
@@ -125,19 +116,10 @@ public class AgentAsToolComposer(IAgentProvider agentProvider, IServiceProvider 
 
         const string instructions = "You are an agent that specializes in weather data for locations around the world.";
 
-        List<AITool> tools = new List<AITool>()
+        List<AITool> tools = new()
         {
-            AIFunctionFactory.Create(
-                (string location) =>
-                    weatherApiClient.QueryAsync(location),
-                name: "get_weather_by_location",
-                description: "Gets weather forecast for a location by name (e.g., city name or coordinates as string)"),
-            
-            AIFunctionFactory.Create(
-                (float latitude, float longitude) =>
-                    weatherApiClient.QueryAsync(latitude, longitude),
-                name: "get_weather_by_coordinates",
-                description: "Gets weather forecast for a location by latitude and longitude coordinates")
+            weatherTools.WeatherByLocation,
+            weatherTools.WeatherByCoordinates
         };
 
         return agentProvider.GetAgent(aiModel, instructions, tools);
