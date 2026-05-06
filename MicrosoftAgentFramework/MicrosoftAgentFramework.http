@@ -1,6 +1,26 @@
 @MicrosoftAgentFramework_HostAddress = http://localhost:5185
 
-GET {{MicrosoftAgentFramework_HostAddress}}/weatherforecast/
+GET {{MicrosoftAgentFramework_HostAddress}}/agentWithTool?message=What%20is%20the%20currency%20of%20Japan%3F
+Accept: application/json
+
+###
+
+GET {{MicrosoftAgentFramework_HostAddress}}/agentAsTool?message=What%20is%20the%20currency%20of%20Brazil%20and%20the%20weather%20in%20Sao%20Paulo%3F
+Accept: application/json
+
+###
+
+GET {{MicrosoftAgentFramework_HostAddress}}/reflectingExecutor?message=Tell%20me%20about%20France&responseLanguage=English
+Accept: application/json
+
+###
+
+GET {{MicrosoftAgentFramework_HostAddress}}/agentOrchestrationHandoff?message=What%20are%20the%20major%20cities%20in%20Germany%20and%20the%20weather%3F&responseLanguage=Spanish
+Accept: application/json
+
+###
+
+GET {{MicrosoftAgentFramework_HostAddress}}/travelPlanner?message=Plan%20a%205-day%20trip%20to%20Lisbon%20for%202%20travelers%20with%20a%20medium%20budget&sessionId=demo-session
 Accept: application/json
 
 ###
