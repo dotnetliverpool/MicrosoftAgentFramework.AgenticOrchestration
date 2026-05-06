@@ -13,10 +13,15 @@ public static class WorkflowLogger
                 logger.LogInformation("[Workflow] Started with input: {Input}", started.Data);
                 break;
             case ExecutorInvokedEvent invoked:
-                logger.LogInformation("[{ExecutorId}] Invoked", invoked.ExecutorId);
+                if (TryGetHandoffRoute(invoked.Data, out var source, out var target))
+                {
+                    logger.LogInformation(
+                        "[Handoff] Invoked from: {Source} to {Target}",
+                        source,
+                        target);
+                }
                 break;
             case AgentResponseUpdateEvent update:
-                logger.LogDebug("[{ExecutorId}] Streaming update", update.ExecutorId);
                 break;
             case AgentResponseEvent response:
                 var usage = UsageInfo.From(response.Response);
@@ -50,5 +55,26 @@ public static class WorkflowLogger
                 logger.LogWarning("[Workflow] Warning: {WarningData}", warning.Data);
                 break;
         }
+    }
+
+    private static bool TryGetHandoffRoute(object? data, out string source, out string target)
+    {
+        source = "UnknownSource";
+        target = "UnknownTarget";
+
+        if (data is null)
+        {
+            return false;
+        }
+
+        var dataType = data.GetType();
+        if (dataType.FullName != "Microsoft.Agents.AI.Workflows.Specialized.HandoffState")
+        {
+            return false;
+        }
+
+        source = dataType.GetProperty("PreviousAgentId")?.GetValue(data) as string ?? "UnknownSource";
+        target = dataType.GetProperty("RequestedHandoffTargetAgentId")?.GetValue(data) as string ?? "UnknownTarget";
+        return true;
     }
 }
